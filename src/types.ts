@@ -18,7 +18,4 @@ export type Bindings = {
   DB: D1Database;
   CALLSIGN: string;
   DOMAIN: string;
-  ADMIN_EMAIL: string;
-  ADMIN_PASSWORD_HASH: string;
-  SESSION_SECRET: string;
 };

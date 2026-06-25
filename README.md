@@ -22,7 +22,7 @@
 | 运行环境 | Cloudflare Workers |
 | 数据库 | Cloudflare D1 (SQLite) |
 | Web 框架 | Hono |
-| 认证 | HMAC-SHA256 Session Cookie |
+| 认证 | Cloudflare Access (Zero Trust) |
 | 部署 | GitHub Actions + Wrangler |
 | 语言 | TypeScript |
 
@@ -45,7 +45,7 @@ src/
 
 ## 环境变量
 
-在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加以下 9 个 Secrets：
+在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加以下 7 个 Secrets：
 
 | Secret | 说明 |
 | --- | --- |
@@ -55,15 +55,11 @@ src/
 | `D1_DATABASE_ID` | D1 数据库 ID |
 | `DOMAIN` | 部署域名 |
 | `CALLSIGN` | 你的呼号 |
-| `ADMIN_EMAIL` | 管理员登录邮箱 |
-| `ADMIN_PASSWORD_HASH` | 管理员密码的 SHA-256 十六进制 |
-| `SESSION_SECRET` | Session 签名密钥（`openssl rand -hex 32`） |
+| `ADMIN_EMAIL` | 联系邮箱 |
 
-## 生成密码哈希
+## 认证
 
-```bash
-echo -n "你的密码" | sha256sum
-```
+管理后台 `/admin` 使用 Cloudflare Access（Zero Trust）保护，无需代码内认证。
 
 ## 本地开发
 
@@ -73,8 +69,6 @@ cd qsl-tracker
 npm install
 npm run dev
 ```
-
-访问 `http://localhost:8787`。管理员账号 `admin@example.com`，默认密码见 `wrangler.local.toml`。
 
 ## 部署
 

@@ -30,6 +30,3 @@ jobs:
           postCommands: |
             echo "${{ secrets.DOMAIN }}" | npx wrangler secret put DOMAIN
             echo "${{ secrets.CALLSIGN }}" | npx wrangler secret put CALLSIGN
-            echo "${{ secrets.ADMIN_EMAIL }}" | npx wrangler secret put ADMIN_EMAIL
-            echo "${{ secrets.ADMIN_PASSWORD_HASH }}" | npx wrangler secret put ADMIN_PASSWORD_HASH
-            echo "${{ secrets.SESSION_SECRET }}" | npx wrangler secret put SESSION_SECRET

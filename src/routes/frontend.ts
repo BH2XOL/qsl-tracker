@@ -29,10 +29,9 @@ export async function frontendHandler(
   const totalCnt = total?.cnt ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCnt / PAGE_SIZE));
   const callsign = env.CALLSIGN;
-  const adminEmail = env.ADMIN_EMAIL;
 
   return new Response(
-    renderPage(cards, totalCnt, totalPages, page, callsign, adminEmail,
+    renderPage(cards, totalCnt, totalPages, page, callsign,
       pendingSent?.cnt ?? 0, sentCount?.cnt ?? 0,
       pendingRcvd?.cnt ?? 0, rcvdCount?.cnt ?? 0,
       callF, sentF, rcvdF),
@@ -53,7 +52,7 @@ function methodBadge(method: string): string {
 
 function renderPage(
   cards: QSLCard[], total: number, totalPages: number, page: number,
-  callsign: string, adminEmail: string,
+  callsign: string,
   pendingSent: number, sentCount: number,
   pendingRcvd: number, rcvdCount: number,
   callF?: string, sentF?: string, rcvdF?: string
@@ -95,7 +94,6 @@ function renderPage(
       <nav class="nav">
         <a href="/" class="active">QSL</a>
         <a href="/admin">管理</a>
-        <a href="mailto:${esc(adminEmail)}">联系我</a>
         <button class="theme-btn" id="theme-btn" aria-label="切换主题">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>

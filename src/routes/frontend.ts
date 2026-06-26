@@ -29,9 +29,10 @@ export async function frontendHandler(
   const totalCnt = total?.cnt ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCnt / PAGE_SIZE));
   const callsign = env.CALLSIGN;
+  const adminEmail = env.ADMIN_EMAIL;
 
   return new Response(
-    renderPage(cards, totalCnt, totalPages, page, callsign,
+    renderPage(cards, totalCnt, totalPages, page, callsign, adminEmail,
       pendingSent?.cnt ?? 0, sentCount?.cnt ?? 0,
       pendingRcvd?.cnt ?? 0, rcvdCount?.cnt ?? 0,
       callF, sentF, rcvdF),
@@ -52,7 +53,7 @@ function methodBadge(method: string): string {
 
 function renderPage(
   cards: QSLCard[], total: number, totalPages: number, page: number,
-  callsign: string,
+  callsign: string, adminEmail: string,
   pendingSent: number, sentCount: number,
   pendingRcvd: number, rcvdCount: number,
   callF?: string, sentF?: string, rcvdF?: string
@@ -94,6 +95,7 @@ function renderPage(
       <nav class="nav">
         <a href="/" class="active">QSL</a>
         <a href="/admin">管理</a>
+        <a href="mailto:${esc(adminEmail)}">联系我</a>
         <button class="theme-btn" id="theme-btn" aria-label="切换主题">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
@@ -123,7 +125,7 @@ function renderPage(
     <div class="search-bar">
       <div class="search-field" style="flex:2;min-width:140px;">
         <label>呼号</label>
-        <input type="text" placeholder="搜索呼号…" id="callSearch" value="${esc(callF || "")}">
+        <input type="text" placeholder="搜索呼号…" id="callSearch" value="${esc(callF || "")}" maxlength="10">
       </div>
       <div class="search-field" style="min-width:100px;">
         <label>发件状态</label>

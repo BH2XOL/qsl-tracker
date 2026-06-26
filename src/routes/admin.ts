@@ -1,11 +1,13 @@
 import type { Bindings } from "../types";
 import { esc, cselect, cselectInitJS } from "../lib/html";
 import { styles } from "../styles";
+import { initSchema } from "../lib/db";
 
 export async function adminHandler(
   _request: Request,
   env: Bindings
 ): Promise<Response> {
+  await initSchema(env.DB);
   return new Response(renderAdmin(env.CALLSIGN), {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
@@ -59,6 +61,10 @@ function renderAdmin(callsign: string): string {
     .form-field textarea:focus {
       border-color:var(--accent-border); box-shadow:0 0 0 2px var(--accent-soft);
     }
+    .upload-zone { border:2px dashed var(--input-border); border-radius:var(--radius); padding:2rem; text-align:center; cursor:pointer; transition: border-color 0.25s, background-color 0.25s; }
+    .upload-zone:hover { border-color:var(--accent-border); background:var(--accent-soft); }
+    .upload-zone p { color:var(--muted); font-size:0.85rem; }
+    .upload-zone p strong { color:var(--accent); }
     .toast { position:fixed; bottom:1.5rem; right:1.5rem; z-index:999; padding:0.75rem 1.25rem; border-radius:8px; font-size:0.85rem; font-weight:500; box-shadow:var(--card-shadow); animation:toast-in 0.3s ease; }
     .toast-ok { background:rgba(45,164,78,0.14); color:var(--success); border:1px solid var(--success); }
     .toast-err { background:var(--danger-soft); color:var(--danger); border:1px solid var(--danger); }
@@ -91,12 +97,25 @@ function renderAdmin(callsign: string): string {
   </header>
   <main class="main">
     <h1 class="page-title">QSL 卡片管理</h1>
-    <p class="page-subtitle">添加卡片 · 更新状态 · 删除</p>
+    <p class="page-subtitle">导入 · 添加 · 编辑 · 删除 · 导出</p>
+
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>CSV 导入</span>
+        <a href="/admin/api/export" class="btn btn-sm btn-success" style="text-decoration:none;">导出 CSV</a>
+      </div>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <p>拖拽 <strong>.csv</strong> 文件或<strong>点击选择</strong></p>
+        <p style="font-size:0.72rem;margin-top:0.25rem;">格式: 呼号,日期,UTC,频率,模式,发件状态,发件方式,发件日期,收件状态,收件日期,备注</p>
+      </div>
+      <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="handleFile(this)">
+      <div id="uploadResult" style="margin-top:0.75rem;font-size:0.82rem;color:var(--muted);display:none;"></div>
+    </div>
 
     <div class="card">
       <div class="card-title">添加 QSL 卡片</div>
       <div class="form-grid">
-        <div class="form-field"><label>呼号 *</label><input type="text" id="addCall" style="text-transform:uppercase;"></div>
+        <div class="form-field"><label>呼号 *</label><input type="text" id="addCall" style="text-transform:uppercase;" maxlength="10"></div>
         <div class="form-field"><label>日期 *</label><input type="date" id="addDate"></div>
         <div class="form-field"><label>UTC 时间 *</label><input type="time" id="addTime" value="12:00"></div>
         <div class="form-field"><label>频率 (MHz)</label><input type="text" id="addFreq" placeholder="14.270"></div>
@@ -127,7 +146,7 @@ function renderAdmin(callsign: string): string {
       <div class="card-title">编辑卡片</div>
       <input type="hidden" id="editId">
       <div class="form-grid">
-        <div class="form-field"><label>呼号</label><input type="text" id="editCall" style="text-transform:uppercase;"></div>
+        <div class="form-field"><label>呼号</label><input type="text" id="editCall" style="text-transform:uppercase;" maxlength="10"></div>
         <div class="form-field"><label>日期</label><input type="date" id="editDate"></div>
         <div class="form-field"><label>UTC 时间</label><input type="time" id="editTime"></div>
         <div class="form-field"><label>频率</label><input type="text" id="editFreq"></div>
@@ -145,6 +164,21 @@ function renderAdmin(callsign: string): string {
   </main>
   <script>
     ${cselectInitJS}
+    var uploadZone = document.getElementById('uploadZone');
+    uploadZone.addEventListener('dragover',function(e){e.preventDefault();});
+    uploadZone.addEventListener('drop',function(e){e.preventDefault();handleFile(e.dataTransfer.files[0]);});
+    async function handleFile(f) {
+      var file = f.files ? f.files[0] : f; if (!file) return;
+      if (!file.name.endsWith('.csv')) { toast('请选择 .csv 文件', true); return; }
+      var text = await file.text();
+      var resp = await fetch('/admin/api/import', { method:'POST', body:text });
+      var data = await resp.json();
+      document.getElementById('uploadResult').style.display='block';
+      document.getElementById('uploadResult').textContent = '新增 '+data.inserted+' 条 · 跳过 '+data.skipped+' 条 · 错误 '+data.errors+' 行';
+      toast('导入完成 · 新增 '+data.inserted+' 条');
+      if (data.inserted > 0) goPage(1);
+    }
+
     function toast(m,e) {
       var t=document.createElement('div'); t.className='toast toast-'+(e?'err':'ok'); t.textContent=m;
       document.body.appendChild(t); setTimeout(function(){t.remove()},2500);
@@ -180,7 +214,9 @@ function renderAdmin(callsign: string): string {
       document.getElementById('addNote').value = '';
     }
 
-    function editCard(card) {
+    function editCard(id) {
+      var card = _cardCache[id];
+      if (!card) return;
       document.getElementById('editId').value = card.id;
       document.getElementById('editCall').value = card.call;
       document.getElementById('editDate').value = card.date;
@@ -238,7 +274,7 @@ function renderAdmin(callsign: string): string {
       document.querySelectorAll('.select-row').forEach(function(c){ c.checked = checked; });
     }
 
-    var _page = 1, _totalPages = 1;
+    var _page = 1, _totalPages = 1, _cardCache = {};
     function renderPager() {
       var p = document.getElementById('cardPager');
       if (!p || _totalPages <= 1) { if (p) p.innerHTML = ''; return; }
@@ -251,14 +287,16 @@ function renderAdmin(callsign: string): string {
       var resp = await fetch('/admin/api/list?page='+_page);
       var data = await resp.json();
       _totalPages = Math.max(1, Math.ceil((data.total||0) / (data.pageSize||50)));
+      _cardCache = {};
       document.getElementById('cardTable').innerHTML = data.cards.map(function(c){
+        _cardCache[c.id] = c;
         var sentBadge = c.sent_status === '已寄出' ? '<span style="color:var(--accent);">已寄出</span>' : '<span style="color:#d97706;">待寄</span>';
         var rcvdBadge = c.rcvd_status === '已收到' ? '<span style="color:var(--success);">已收到</span>' : '<span style="color:#d97706;">待收</span>';
         return '<tr><td><input type="checkbox" class="checkbox select-row" value="'+c.id+'"></td>'+
                '<td class="callsign-cell">'+esc(c.call)+'</td>'+
                '<td>'+esc(c.date)+'</td><td>'+esc(c.time)+'</td><td>'+esc(c.freq)+'</td><td>'+esc(c.mode)+'</td>'+
                '<td>'+sentBadge+'</td><td>'+rcvdBadge+'</td>'+
-               '<td><button class="btn btn-sm btn-primary" onclick=\\'editCard('+JSON.stringify(c).replace(/'/g,"\\\\'")+')\\' style="margin-right:0.25rem;">编辑</button>'+
+               '<td><button class="btn btn-sm btn-primary" onclick="editCard('+c.id+')" style="margin-right:0.25rem;">编辑</button>'+
                '<button class="btn btn-sm btn-danger" onclick="deleteOne('+c.id+')">删除</button></td></tr>';
       }).join('');
       renderPager();

@@ -68,7 +68,12 @@ export function countByRcvdStatus(db: D1Database, status: string) {
   return db.prepare("SELECT COUNT(*) as cnt FROM qsl_cards WHERE rcvd_status = ?").bind(status).first<{ cnt: number }>();
 }
 
-export function insertCard(db: D1Database, card: Omit<QSLCard, "id" | "created_at">) {
+export async function insertCard(db: D1Database, card: Omit<QSLCard, "id" | "created_at">) {
+  const existing = await db.prepare(`
+    SELECT COUNT(*) as cnt FROM qsl_cards
+    WHERE call = ? AND date = ? AND time = ? AND freq = ? AND mode = ?
+  `).bind(card.call, card.date, card.time, card.freq, card.mode).first<{ cnt: number }>();
+  if ((existing?.cnt ?? 0) > 0) return;
   return db.prepare(`
     INSERT INTO qsl_cards (call, date, time, freq, mode, sent_status, sent_method, sent_date, rcvd_status, rcvd_date, note)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -97,6 +102,10 @@ export function deleteCard(db: D1Database, id: number) {
 export function deleteCards(db: D1Database, ids: number[]) {
   const ph = ids.map(() => "?").join(",");
   return db.prepare(`DELETE FROM qsl_cards WHERE id IN (${ph})`).bind(...ids).run();
+}
+
+export function exportAllCards(db: D1Database) {
+  return db.prepare("SELECT * FROM qsl_cards ORDER BY date DESC, time DESC").all<Record<string, unknown>>().then(r => r.results.map(rowToCard));
 }
 
 function buildFilter(baseSQL: string, filters?: Record<string, string | undefined>) {

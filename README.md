@@ -4,22 +4,22 @@
 
 # qsl-tracker
 
-业余无线电 QSL 卡片双向追踪系统（发件 / 收件），部署在 Cloudflare Workers + D1。
+业余无线电 QSL 卡片双向追踪系统，部署在 Cloudflare Workers + D1。管理后台由 Cloudflare Access 保护。
 
 ## 功能
 
 - 卡片管理 — 记录通联信息（呼号、日期、时间、频率、模式），追踪发件和收件状态
-- 双向追踪 — 发件状态（待寄 / 已寄出）+ 发件方式（卡片局 / 直邮 / 电子）+ 收件状态（待收 / 已收到）
-- 统计卡片 — 公开首页展示待寄、待收、发卡总计、收卡总计四张统计卡
+- 双向追踪 — 发件（待寄 / 已寄出，卡片局 / 直邮 / 电子）+ 收件（待收 / 已收到）
+- 统计卡片 — 公开首页展示待寄出、待接收、发卡总计、收卡总计
 - 搜索筛选 — 按呼号 / 发件状态 / 收件状态过滤，分页浏览
-- 管理后台 — 添加卡片、编辑状态、批量删除，HMAC-SHA256 Session 认证
-- 主题切换 — 浅色 / 深色主题，View Transition 平滑过渡动画
+- 管理后台 — 添加、编辑、批量删除、CSV 导出
+- 主题切换 — 浅色 / 深色主题，View Transition 平滑过渡
 
 ## 技术栈
 
 | 层 | 技术 |
 | --- | --- |
-| 运行环境 | Cloudflare Workers |
+| 运行时 | Cloudflare Workers |
 | 数据库 | Cloudflare D1 (SQLite) |
 | Web 框架 | Hono |
 | 认证 | Cloudflare Access (Zero Trust) |
@@ -31,35 +31,49 @@
 ```
 src/
 ├── index.ts               # Hono 入口，路由注册
-├── styles.ts              # 全局样式（CSS 变量 + 自定义下拉组件）
+├── styles.ts              # 全局样式（主题变量 + 自定义下拉）
 ├── types.ts               # 类型定义
 ├── lib/
-│   ├── db.ts              # D1 数据库操作（CRUD + 统计）
-│   ├── auth.ts            # HMAC-SHA256 Session 认证
+│   ├── db.ts              # D1 数据库（建表 / CRUD / 统计 / 导出）
 │   └── html.ts            # HTML 工具 + 自定义下拉组件
 └── routes/
     ├── frontend.ts         # 公开页面（统计卡 + 搜索 + 表格）
-    ├── admin.ts            # 管理后台（登录 + 添加 + 编辑 + 删除）
+    ├── admin.ts            # 管理后台（添加 + 编辑 + 删除 + 导出）
     └── api.ts              # REST API
 ```
 
-## 环境变量
+## 部署
 
-在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加以下 7 个 Secrets：
+### 1. 创建 D1 数据库
+
+```bash
+npx wrangler d1 create qsl-tracker-db
+```
+
+记下输出的 `database_id`。
+
+### 2. 配置 GitHub Secrets
+
+仓库 Settings → Secrets and variables → Actions，添加 6 个：
 
 | Secret | 说明 |
 | --- | --- |
 | `CF_API_TOKEN` | Cloudflare API 令牌 |
 | `CF_ACCOUNT_ID` | Cloudflare 账户 ID |
 | `WORKER_NAME` | Worker 名称（如 `qsl-tracker`） |
-| `D1_DATABASE_ID` | D1 数据库 ID |
+| `D1_DATABASE_ID` | 第 1 步返回的数据库 ID |
 | `DOMAIN` | 部署域名 |
-| `CALLSIGN` | 你的呼号 |
-| `ADMIN_EMAIL` | 联系邮箱 |
+| `CALLSIGN` | 呼号 |
 
-## 认证
+### 3. 配置 Cloudflare Access
 
-管理后台 `/admin` 使用 Cloudflare Access（Zero Trust）保护，无需代码内认证。
+在 Cloudflare Zero Trust 中添加 Application，保护 `/admin` 路径，设置邮箱白名单验证。
+
+### 4. 推送部署
+
+```bash
+git push origin main
+```
 
 ## 本地开发
 
@@ -70,36 +84,21 @@ npm install
 npm run dev
 ```
 
-## 部署
-
-推送 `main` 分支自动触发 GitHub Actions 部署：
-
-```bash
-git push origin main
-```
-
-或手动：
-
-```bash
-npm run deploy
-```
+编辑 `wrangler.local.toml` 中的 `CALLSIGN`、`DOMAIN` 后访问 `http://localhost:8787`。
 
 ## API
-
-### 公开
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/` | 公开首页 |
-
-### 管理（需 Session）
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
+| GET | `/admin` | 管理后台 |
 | POST | `/admin/api/add` | 添加卡片 |
 | POST | `/admin/api/update/:id` | 更新卡片 |
-| POST | `/admin/api/delete` | 删除卡片（单条或批量） |
-| GET | `/admin/api/list?page=` | 管理端列表 |
+| POST | `/admin/api/delete` | 删除卡片 |
+| GET | `/admin/api/list` | 卡片列表 |
+| GET | `/admin/api/export` | 导出 CSV |
+
+所有 `/admin/*` 路由由 Cloudflare Access 保护。
 
 ## 授权
 

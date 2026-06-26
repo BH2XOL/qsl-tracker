@@ -139,6 +139,7 @@ html[data-theme="dark"] .icon-moon { display: none; }
   height: 2.35rem; padding: 0 1.1rem; font-size: 0.82rem; font-weight: 500;
   border: none; border-radius: 8px; cursor: pointer;
   font-family: inherit; transition: background-color 0.25s, opacity 0.2s;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover { opacity: 0.88; }

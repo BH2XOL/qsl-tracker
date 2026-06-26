@@ -1,8 +1,7 @@
 import type { Bindings } from "../types";
-import { queryCards, insertCard, updateCard, deleteCard, deleteCards, countCards, exportAllCards, initSchema } from "../lib/db";
+import { queryCards, insertCard, updateCard, deleteCard, deleteCards, countCards, exportAllCards } from "../lib/db";
 
 export async function apiImportHandler(request: Request, env: Bindings): Promise<Response> {
-  await initSchema(env.DB);
   const text = await request.text();
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) {
@@ -12,7 +11,7 @@ export async function apiImportHandler(request: Request, env: Bindings): Promise
   let inserted = 0, skipped = 0, errors = 0;
   const VALID_SENT = ["待寄", "已寄出"];
   const VALID_RCVD = ["待收", "已收到"];
-  const VALID_METHOD = ["", "卡片局", "直邮", "电子"];
+  const VALID_METHOD = ["", "卡片局", "直邮", "电子", "眼球QSO"];
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(",");

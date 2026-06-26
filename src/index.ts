@@ -1,10 +1,16 @@
 import { Hono } from "hono";
 import type { Bindings } from "./types";
+import { initSchema } from "./lib/db";
 import { frontendHandler } from "./routes/frontend";
 import { adminHandler } from "./routes/admin";
 import { apiAddHandler, apiUpdateHandler, apiDeleteHandler, apiListHandler, apiExportHandler, apiImportHandler } from "./routes/api";
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+app.use("*", async (c, next) => {
+  await initSchema(c.env.DB);
+  await next();
+});
 
 app.get("/", (c) => frontendHandler(c.req.raw, c.env));
 

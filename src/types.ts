@@ -17,6 +17,5 @@ export interface QSLCard {
 export type Bindings = {
   DB: D1Database;
   CALLSIGN: string;
-  DOMAIN: string;
   ADMIN_EMAIL: string;
 };

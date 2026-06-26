@@ -1,13 +1,11 @@
 import type { Bindings } from "../types";
-import { esc, cselect, cselectInitJS } from "../lib/html";
+import { esc, cselect, cselectInitJS, themeInitScript, themeToggleScript, themeSVG } from "../lib/html";
 import { styles } from "../styles";
-import { initSchema } from "../lib/db";
 
 export async function adminHandler(
   _request: Request,
   env: Bindings
 ): Promise<Response> {
-  await initSchema(env.DB);
   return new Response(renderAdmin(env.CALLSIGN), {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });
@@ -20,14 +18,7 @@ function renderAdmin(callsign: string): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(callsign)} · QSL 管理</title>
-  <script>
-    (function() {
-      var saved = localStorage.getItem('theme');
-      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
-        document.documentElement.setAttribute('data-theme','dark');
-      }
-    })();
-  </script>
+  ${themeInitScript}
   <style>${styles}
     .card {
       background:var(--card-bg); border:1px solid var(--card-border);
@@ -71,7 +62,7 @@ function renderAdmin(callsign: string): string {
     @keyframes toast-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
     .callsign-cell { font-weight:600; color:var(--text-heading); }
     .checkbox { width:1rem; height:1rem; accent-color:var(--accent); cursor:pointer; }
-    @media (max-width:640px) { .form-grid { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:640px) { .form-grid { grid-template-columns:repeat(1,1fr); } }
   </style>
 </head>
 <body>
@@ -82,22 +73,13 @@ function renderAdmin(callsign: string): string {
         <a href="/">QSL</a>
         <a href="/admin" class="active">管理</a>
         <button class="theme-btn" id="theme-btn" aria-label="切换主题">
-          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
+          ${themeSVG}
         </button>
       </nav>
     </div>
   </header>
   <main class="main">
     <h1 class="page-title">QSL 卡片管理</h1>
-    <p class="page-subtitle">导入 · 添加 · 编辑 · 删除 · 导出</p>
 
     <div class="card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -120,7 +102,7 @@ function renderAdmin(callsign: string): string {
         <div class="form-field"><label>UTC 时间 *</label><input type="time" id="addTime" value="12:00"></div>
         <div class="form-field"><label>频率 (MHz)</label><input type="text" id="addFreq" placeholder="14.270"></div>
         <div class="form-field"><label>模式</label><input type="text" id="addMode" placeholder="SSB / FT8 / CW"></div>
-        <div class="form-field"><label>发件方式</label>${cselect("addMethod", [{label:"—",value:""},{label:"卡片局",value:"卡片局"},{label:"直邮",value:"直邮"},{label:"电子",value:"电子"}])}</div>
+        <div class="form-field"><label>发件方式</label>${cselect("addMethod", [{label:"—",value:""},{label:"卡片局",value:"卡片局"},{label:"直邮",value:"直邮"},{label:"电子",value:"电子"},{label:"眼球QSO",value:"眼球QSO"}])}</div>
         <div class="form-field"><label>备注</label><textarea id="addNote"></textarea></div>
       </div>
       <button class="btn btn-primary" style="margin-top:1rem;" onclick="addCard()">添加卡片</button>
@@ -290,12 +272,13 @@ function renderAdmin(callsign: string): string {
       _cardCache = {};
       document.getElementById('cardTable').innerHTML = data.cards.map(function(c){
         _cardCache[c.id] = c;
-        var sentBadge = c.sent_status === '已寄出' ? '<span style="color:var(--accent);">已寄出</span>' : '<span style="color:#d97706;">待寄</span>';
-        var rcvdBadge = c.rcvd_status === '已收到' ? '<span style="color:var(--success);">已收到</span>' : '<span style="color:#d97706;">待收</span>';
+        var sentClass = c.sent_status === '已寄出' ? 'status-sent' : 'status-pending';
+        var rcvdClass = c.rcvd_status === '已收到' ? 'status-rcvd' : 'status-pending';
         return '<tr><td><input type="checkbox" class="checkbox select-row" value="'+c.id+'"></td>'+
                '<td class="callsign-cell">'+esc(c.call)+'</td>'+
                '<td>'+esc(c.date)+'</td><td>'+esc(c.time)+'</td><td>'+esc(c.freq)+'</td><td>'+esc(c.mode)+'</td>'+
-               '<td>'+sentBadge+'</td><td>'+rcvdBadge+'</td>'+
+               '<td><span class="status-badge '+sentClass+'">'+esc(c.sent_status)+'</span></td>'+
+               '<td><span class="status-badge '+rcvdClass+'">'+esc(c.rcvd_status)+'</span></td>'+
                '<td><button class="btn btn-sm btn-primary" onclick="editCard('+c.id+')" style="margin-right:0.25rem;">编辑</button>'+
                '<button class="btn btn-sm btn-danger" onclick="deleteOne('+c.id+')">删除</button></td></tr>';
       }).join('');
@@ -303,19 +286,7 @@ function renderAdmin(callsign: string): string {
     }
     function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-    (function() {
-      var html=document.documentElement, btn=document.getElementById('theme-btn');
-      if(!btn) return;
-      function set(d){ if(d){html.setAttribute('data-theme','dark');localStorage.setItem('theme','dark');}else{html.removeAttribute('data-theme');localStorage.setItem('theme','light');} }
-      btn.addEventListener('click',function(e){
-        var r=btn.getBoundingClientRect();
-        html.style.setProperty('--vt-x',(r.left+r.width/2)+'px');
-        html.style.setProperty('--vt-y',(r.top+r.height/2)+'px');
-        var isDark=html.getAttribute('data-theme')==='dark';
-        if(document.startViewTransition){document.startViewTransition(function(){set(!isDark);});}else{set(!isDark);}
-      });
-    })();
-
+    ${themeToggleScript}
     loadList();
   </script>
 </body>

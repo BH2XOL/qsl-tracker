@@ -124,7 +124,7 @@ html[data-theme="dark"] .icon-moon { display: none; }
 }
 .search-field { display: flex; flex-direction: column; gap: 0.2rem; }
 .search-field label { font-size: 0.68rem; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; }
-.search-field input, .search-field select {
+.search-field input {
   height: 2.35rem; padding: 0 0.65rem; font-size: 0.82rem;
   background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 8px;
   color: var(--text); font-family: inherit;
@@ -208,11 +208,31 @@ footer a { color: var(--muted); }
 footer a:hover { color: var(--accent); text-decoration: underline; }
 
 @media (max-width: 640px) {
-  .stat-grid { grid-template-columns: repeat(2,1fr); }
-  .search-bar { flex-direction: column; align-items: stretch; }
-  .search-field input, .search-field select { width: 100%; }
+  .header-inner { padding: 0 0.8rem; }
+  .nav { gap: 0.8rem; }
+  .logo { font-size: 0.95rem; }
+  .main { padding: 1.25rem 0.8rem 3rem; }
+  .stat-grid { grid-template-columns: repeat(2,1fr); gap: 0.5rem; }
+  .stat-card { padding: 0.8rem; }
+  .stat-label { font-size: 0.62rem; }
+  .stat-value { font-size: 1.2rem; }
+  .search-bar { flex-direction: column; align-items: stretch; gap: 0.5rem; padding: 0.75rem; }
+  .search-field input { width: 100%; min-width: 0; }
+  .search-field { min-width: 0; }
+  .cselect { width: 100%; min-width: 0; }
+  .cselect-trigger { width: 100%; }
+  .page-title { font-size: 1.15rem; }
+  .page-subtitle { margin-bottom: 1rem; }
+  th:nth-child(3),td:nth-child(3),
   th:nth-child(4),td:nth-child(4),
-  th:nth-child(6),td:nth-child(6) { display: none; }
+  th:nth-child(6),td:nth-child(6),
+  th:nth-child(8),td:nth-child(8) { display: none; }
+  td { padding: 0.55rem 0.6rem; font-size: 0.78rem; }
+  th { padding: 0.55rem 0.6rem; font-size: 0.65rem; }
+  .method-badge { display: none; }
+  .pagination { flex-direction: column; gap: 0.5rem; align-items: center; padding: 0.6rem; }
+  .btn { height: 2.15rem; padding: 0 0.8rem; font-size: 0.78rem; }
+  .btn-sm { height: 1.75rem; padding: 0 0.5rem; font-size: 0.72rem; }
 }
 
 .cselect { position: relative; display: inline-flex; min-width: 100px; }
